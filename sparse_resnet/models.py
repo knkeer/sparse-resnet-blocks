@@ -11,11 +11,12 @@ class BottleNeck(nn.Module):
         self.in_channels = in_channels
         self.bottleneck = out_channels // 4
         self.out_channels = out_channels
+        self.stride = stride
         self.sparse = sparse
         
         conv_layer = Conv2dSVDO if sparse else nn.Conv2d
         self.bn_1 = nn.BatchNorm2d(in_channels)
-        self.conv_1 = conv_layer(in_channels, self.bottleneck, kernel_size=1, stride=stride)
+        self.conv_1 = conv_layer(in_channels, self.bottleneck, kernel_size=1, stride=self.stride)
         self.bn_2 = nn.BatchNorm2d(self.bottleneck)
         self.conv_2 = conv_layer(self.bottleneck, self.bottleneck, kernel_size=3, padding=1)
         self.bn_3 = nn.BatchNorm2d(self.bottleneck)
@@ -46,14 +47,14 @@ class BottleNeck(nn.Module):
     def forward(self, block_input):
         if self.shortcut is None:
             block_output = self.conv_1(F.relu(self.bn_1(block_input)))
-            block_output = self.conv_2(F.relu(self.bn_2(block_input)))
-            block_output = self.conv_3(F.relu(self.bn_3(block_input)))
+            block_output = self.conv_2(F.relu(self.bn_2(block_output)))
+            block_output = self.conv_3(F.relu(self.bn_3(block_output)))
             return block_input + block_output
         else:
             x = F.relu(self.bn_1(block_input))
             block_output = self.conv_1(x)
-            block_output = self.conv_2(F.relu(self.bn_2(block_input)))
-            block_output = self.conv_3(F.relu(self.bn_3(block_input)))
+            block_output = self.conv_2(F.relu(self.bn_2(block_output)))
+            block_output = self.conv_3(F.relu(self.bn_3(block_output)))
             return self.shortcut(x) + block_output
 
     def kullback_leibler_divergence(self):
