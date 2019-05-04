@@ -13,7 +13,7 @@ if __name__ == '__main__':
     cifar_train = utils.get_cifar(batch_size=128, train=True)
     cifar_test = utils.get_cifar(batch_size=128, train=False)
     model = models.make_resnet(164, sparse=False)
-    optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-4)
+    optimizer = optim.SGD(model.parameters(), lr=0.1, momentum=0.9, weight_decay=1e-4)
     lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
     criterion = nn.NLLLoss()
     num_epochs = 200

@@ -28,6 +28,7 @@ class BottleNeck(nn.Module):
                 self.shortcut = Conv2dSVDO(in_channels, out_channels, kernel_size=1, stride=stride)
             else:
                 self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride)
+        self.reset_parameters()
 
     def reset_parameters(self):
         nn.init.kaiming_normal_(self.conv_1.weight, nonlinearity='relu')
