@@ -4,6 +4,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 import torch.optim as optim
+from tqdm import tqdm
 
 from sparse_resnet import models, utils
 
@@ -11,7 +12,7 @@ if __name__ == '__main__':
     compute_compession = False
     cifar_train = utils.get_cifar(batch_size=128, train=True)
     cifar_test = utils.get_cifar(batch_size=128, train=False)
-    model = models.make_resnet(models.BottleNeck, 18, sparse=False)
+    model = models.make_resnet(164, sparse=False)
     optimizer = optim.Adam(model.parameters(), lr=0.1, weight_decay=1e-4)
     lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=10)
     criterion = nn.NLLLoss()
@@ -31,7 +32,7 @@ if __name__ == '__main__':
     for epoch in range(1, num_epochs + 1):
         # train for epoch and collect average train loss and acc
         train_loss, correct = 0.0, 0
-        for samples, targets in cifar_train:
+        for samples, targets in tqdm(cifar_train):
             samples, targets = samples.to(device), targets.to(device)
             optimizer.zero_grad()
             logits = model(samples)

@@ -12,7 +12,7 @@ class LinearSVDO(nn.Module):
         self.in_features = in_features
         self.out_features = out_features
         self.threshold = threshold
-        self.mu = nn.Parameter(torch.Tensor(out_features, in_features))
+        self.weight = nn.Parameter(torch.Tensor(out_features, in_features))
         self.log_sigma_2 = nn.Parameter(torch.Tensor(out_features, in_features))
         if bias is not None:
             self.bias = nn.Parameter(torch.Tensor(out_features))
@@ -21,22 +21,22 @@ class LinearSVDO(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_normal_(self.mu, a=math.sqrt(5))
+        nn.init.kaiming_normal_(self.weight, a=math.sqrt(5))
         nn.init.constant_(self.log_sigma_2, -10.0)
         if self.bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.mu)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         if self.training:
-            self.log_alpha = self.log_sigma_2 - torch.log(self.mu ** 2 + 1e-8)
+            self.log_alpha = self.log_sigma_2 - torch.log(self.weight ** 2 + 1e-8)
             self.log_alpha = torch.clamp(self.log_alpha, -10, 10)
-            lrt_mean = F.linear(x, self.mu, self.bias)
+            lrt_mean = F.linear(x, self.weight, self.bias)
             lrt_sigma = torch.sqrt(F.linear(x ** 2, torch.exp(self.log_sigma_2)) + 1e-8)
             return lrt_mean + torch.randn_like(lrt_mean) * lrt_sigma
         mask = (self.log_alpha < self.threshold).float()
-        return F.linear(x, self.mu * mask, self.bias)
+        return F.linear(x, self.weight * mask, self.bias)
 
     def kullback_leibler_divergence(self):
         k_1, k_2, k_3 = 0.63576, 1.8732, 1.48695
@@ -65,7 +65,7 @@ class Conv2dSVDO(nn.Module):
         self.dilation = utils._pair(dilation)
         self.groups = groups
         shape = (out_channels, in_channels // groups, *self.kernel_size)
-        self.mu = nn.Parameter(torch.Tensor(*shape))
+        self.weight = nn.Parameter(torch.Tensor(*shape))
         self.log_sigma_2 = nn.Parameter(torch.Tensor(*shape))
         if bias:
             self.bias = nn.Parameter(torch.Tensor(out_channels))
@@ -75,18 +75,18 @@ class Conv2dSVDO(nn.Module):
         self.reset_parameters()
 
     def reset_parameters(self):
-        nn.init.kaiming_normal_(self.mu, a=math.sqrt(5))
+        nn.init.kaiming_normal_(self.weight, a=math.sqrt(5))
         nn.init.constant_(self.log_sigma_2, -10.0)
         if self.bias is not None:
-            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.mu)
+            fan_in, _ = nn.init._calculate_fan_in_and_fan_out(self.weight)
             bound = 1 / math.sqrt(fan_in)
             nn.init.uniform_(self.bias, -bound, bound)
 
     def forward(self, x):
         if self.training:
-            self.log_alpha = self.log_sigma_2 - torch.log(self.mu ** 2 + 1e-8)
+            self.log_alpha = self.log_sigma_2 - torch.log(self.weight ** 2 + 1e-8)
             self.log_alpha = torch.clamp(self.log_alpha, -10, 10)
-            lrt_mean = F.conv2d(x, self.mu, bias=self.bias, stride=self.stride,
+            lrt_mean = F.conv2d(x, self.weight, bias=self.bias, stride=self.stride,
                                 padding=self.padding, dilation=self.dilation,
                                 groups=self.groups)
             lrt_sigma = torch.sqrt(
@@ -95,7 +95,7 @@ class Conv2dSVDO(nn.Module):
             )
             return lrt_mean + torch.randn_like(lrt_mean) * lrt_sigma
         mask = (self.log_alpha < self.threshold).float()
-        return F.conv2d(x, self.mu * mask, bias=self.bias, stride=self.stride,
+        return F.conv2d(x, self.weight * mask, bias=self.bias, stride=self.stride,
                         padding=self.padding, dilation=self.dilation,
                         groups=self.groups)
 

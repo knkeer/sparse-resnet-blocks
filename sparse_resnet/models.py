@@ -28,6 +28,21 @@ class BottleNeck(nn.Module):
             else:
                 self.shortcut = nn.Conv2d(in_channels, out_channels, kernel_size=1, stride=stride)
 
+    def reset_parameters(self):
+        nn.init.kaiming_normal_(self.conv_1.weight, nonlinearity='relu')
+        nn.init.constant_(self.conv_1.bias, 0.0)
+        nn.init.kaiming_normal_(self.conv_2.weight, nonlinearity='relu')
+        nn.init.constant_(self.conv_2.bias, 0.0)
+        nn.init.kaiming_normal_(self.conv_3.weight, nonlinearity='relu')
+        nn.init.constant_(self.conv_3.bias, 0.0)
+        
+        nn.init.constant_(self.bn_1.weight, 1.0)
+        nn.init.constant_(self.bn_1.bias, 0.0)
+        nn.init.constant_(self.bn_2.weight, 1.0)
+        nn.init.constant_(self.bn_2.bias, 0.0)
+        nn.init.constant_(self.bn_3.weight, 1.0)
+        nn.init.constant_(self.bn_3.bias, 0.0)
+
     def forward(self, block_input):
         if self.shortcut is None:
             block_output = self.conv_1(F.relu(self.bn_1(block_input)))
@@ -102,7 +117,7 @@ class WeakClassifier(nn.Module):
 def make_resnet(num_layers, sparse=False, sequential=False):
     assert (num_layers - 2) % 9 == 0
     n = (num_layers - 2) // 9
-    def make_blocks(block_generator, in_channels, out_channels, stride, num_blocks):
+    def make_blocks(in_channels, out_channels, stride, num_blocks):
         block_layers = [BottleNeck(in_channels, out_channels, stride=stride, sparse=sparse,)]
         for _ in range(num_blocks):
             block_layers.append(BottleNeck(out_channels, out_channels, sparse=sparse))
@@ -111,22 +126,22 @@ def make_resnet(num_layers, sparse=False, sequential=False):
     channels = [16, 64, 128, 256]
     conv_layer = Conv2dSVDO if sparse else nn.Conv2d
     layers = [conv_layer(3, channels[0], kernel_size=3, padding=1)]
-    layers.extend(make_blocks(block, channels[0], channels[1], 1, n))
-    layers.extend(make_blocks(block, channels[1], channels[2], 2, n))
-    layers.extend(make_blocks(block, channels[2], channels[3], 2, n))
+    layers.extend(make_blocks(channels[0], channels[1], 1, n))
+    layers.extend(make_blocks(channels[1], channels[2], 2, n))
+    layers.extend(make_blocks(channels[2], channels[3], 2, n))
     if sequential:
         weak_classifiers = [WeakClassifier(
-            nn.Sequential(layer[0], layer[1]),
-            LinearClassifier(channels[0], 10, sparse=sparse, version=version)
+            nn.Sequential(layers[0], layers[1]),
+            LinearClassifier(channels[0], 10, sparse=sparse)
         )]
         for layer in layers[2:]:
             weak_classifier = WeakClassifier(
                 layer,
-                LinearClassifier(layer.out_channels, 10, sparse=sparse, version=version)
+                LinearClassifier(layer.out_channels, 10, sparse=sparse)
             )
             weak_classifiers.append(weak_classifier)
         return weak_classifiers
     else:
-        layers.append(LinearClassifier(layers[-1].out_channels, 10, sparse=sparse, version=version))
+        layers.append(LinearClassifier(layers[-1].out_channels, 10, sparse=sparse))
         return nn.Sequential(*layers)
 
