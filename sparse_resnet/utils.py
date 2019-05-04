@@ -91,14 +91,18 @@ def validate(model, criterion, dataloader, compute_compression=False,
         return average_loss, average_accuracy
 
 
-def checkpoint(name_suffix, model, optimizer, checkpoint_dir):
-    # Make directory if it does not exist
-    if not os.path.exists(checkpoint_dir):
+def create_dir(dir_path):
+    if not os.path.exists(dir_path):
         try:
-            os.makedirs(checkpoint_dir)
+            os.makedirs(dir_path)
         except OSError as exc:  # Guard against race condition
             if exc.errno != errno.EEXIST:
                 raise
+
+
+def checkpoint(name_suffix, model, optimizer, checkpoint_dir):
+    # Make directory if it does not exist
+    create_dir(checkpoint_dir)
     # Save model and optimizer state dicts
     model_path = os.path.join(checkpoint_dir, 'model_{}.pth'.format(name_suffix))
     optimizer_path = os.path.join(checkpoint_dir, 'optimizer_{}.pth'.format(name_suffix))

@@ -18,9 +18,11 @@ class ResidualLayer(nn.Module):
         self.activation = activation
 
         if sparse:
-            self.conv_layer = Conv2dSVDO(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+            self.conv_layer = Conv2dSVDO(in_channels, out_channels, kernel_size,
+                                         padding=padding, stride=stride, bias=False)
         else:
-            self.conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size, padding=padding, stride=stride)
+            self.conv_layer = nn.Conv2d(in_channels, out_channels, kernel_size,
+                                        padding=padding, stride=stride, bias=False)
         if self.use_bn:
             self.bn_layer = nn.BatchNorm2d(out_channels if conv_first else in_channels)
 
@@ -204,8 +206,10 @@ def make_resnet(n, sparse=False, sequential=False, version=2):
     if sequential:
         weak_classifiers = []
         for layer in layers:
-            weak_classifier = WeakClassifier(layer,
-                                             LinearClassifier(layer.out_channels, 10, sparse=sparse, version=version))
+            weak_classifier = WeakClassifier(
+                layer,
+                LinearClassifier(layer.out_channels, 10, sparse=sparse, version=version)
+            )
             weak_classifiers.append(weak_classifier)
         return weak_classifiers
     else:
