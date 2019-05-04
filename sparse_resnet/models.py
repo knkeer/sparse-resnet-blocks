@@ -97,7 +97,7 @@ class BottleNeck(nn.Module):
     def __init__(self, in_channels, out_channels, stride=1, sparse=False, version=2):
         super(BottleNeck, self).__init__()
         self.in_channels = in_channels
-        self.bottleneck = in_channels
+        self.bottleneck = out_channels // 4
         self.out_channels = out_channels
         self.sparse = sparse
         self.version = version
@@ -190,14 +190,13 @@ class WeakClassifier(nn.Module):
         return total_kl
 
 
-def make_resnet(n, sparse=False, sequential=False, version=2):
+def make_resnet(block, n, sparse=False, sequential=False, version=2):
     def make_blocks(block_generator, in_channels, out_channels, stride, num_blocks):
         block_layers = [block_generator(in_channels, out_channels, stride=stride, sparse=sparse, version=version)]
         for _ in range(num_blocks):
             block_layers.append(block_generator(out_channels, out_channels, sparse=sparse, version=version))
         return block_layers
 
-    block = BasicBlock if version == 1 else BottleNeck
     channels = [16, 16, 32, 64] if version == 1 else [16, 64, 128, 256]
     layers = [ResidualLayer(3, channels[0], 3, padding=1, sparse=sparse, conv_first=True)]
     layers.extend(make_blocks(block, channels[0], channels[1], 1, n))
