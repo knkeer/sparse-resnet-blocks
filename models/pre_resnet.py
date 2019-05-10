@@ -181,7 +181,8 @@ class LayerwiseSequential(nn.Module):
                 if hasattr(self.weak_classifier.classifier.linear, 'log_sigma_2'):
                     if hasattr(old_weak_classifier.classifier.linear, 'log_sigma_2'):
                         old_log_sigma_2 = old_weak_classifier.classifier.linear.log_sigma_2.data
-                        old_log_sigma_2 = old_log_sigma_2.repeat((1, times)) - torch.log(times)
+                        old_log_sigma_2 = old_log_sigma_2.repeat((1, times))
+                        old_log_sigma_2 = old_log_sigma_2 - torch.log(torch.tensor([float(times)]))
                         self.weak_classifier.classifier.linear.log_sigma_2.data = old_log_sigma_2
                 self.weak_classifier.classifier.linear.weight.data = old_weight
                 self.weak_classifier.classifier.linear.bias.data = old_bias
@@ -220,7 +221,7 @@ def make_resnet(num_classes=10, depth=110, sparse=False, sequential=False):
 
     def _make_blocks(in_channels, out_channels, stride, num_blocks):
         block_layers = [block(in_channels, out_channels, stride=stride, sparse=sparse)]
-        for _ in range(num_blocks):
+        for _ in range(num_blocks - 1):
             block_layers.append(block(out_channels, out_channels, sparse=sparse))
         return block_layers
 

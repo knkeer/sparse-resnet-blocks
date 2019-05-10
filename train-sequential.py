@@ -92,12 +92,12 @@ if __name__ == '__main__':
                                   weight_decay=args.weight_decay, momentum=0.9)
         lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5)
 
-    columns = ['block', 'epoch', 'tr_loss', 'tr_acc', 'te_loss', 'te_acc', 'time']
+    columns = ['block', 'epoch', 'lr', 'tr_loss', 'tr_acc', 'te_loss', 'te_acc', 'time']
     if args.sparse:
         columns = columns[:-1] + ['blk_sp', 'clf_sp', 'beta'] + columns[-1:]
-        fmt = ['%s', '%s', '8.2f', '5.2f', '8.2f', '5.2f', '6.2f', '6.2f', '4.2f', '5.1f']
+        fmt = ['%s', '%s', '3.1e', '8.2f', '5.2f', '8.2f', '5.2f', '6.2f', '6.2f', '4.2f', '5.1f']
     else:
-        fmt = ['%s', '%s', '8.6f', '5.2f', '8.6f', '5.2f', '5.1f']
+        fmt = ['%s', '%s', '3.1e', '8.6f', '5.2f', '8.6f', '5.2f', '5.1f']
 
     with open(os.path.join(args.checkpoint_dir, 'logs.csv'), 'w') as f:
         f.write('{}\n'.format(','.join(columns)))
