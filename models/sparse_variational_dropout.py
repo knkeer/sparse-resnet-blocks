@@ -33,7 +33,7 @@ class LinearSVDO(nn.Module):
             self.log_alpha = self.log_sigma_2 - torch.log(self.weight ** 2 + 1e-8)
             self.log_alpha = torch.clamp(self.log_alpha, -10, 10)
             lrt_mean = F.linear(x, self.weight, self.bias)
-            lrt_sigma = torch.sqrt(F.linear(x ** 2, torch.exp(self.log_sigma_2)) + 1e-8)
+            lrt_sigma = torch.sqrt(F.linear(x ** 2, torch.exp(self.log_alpha) * self.weight ** 2) + 1e-8)
             return lrt_mean + torch.randn_like(lrt_mean) * lrt_sigma
         mask = (self.log_alpha < self.threshold).float()
         return F.linear(x, self.weight * mask, self.bias)
@@ -90,7 +90,7 @@ class Conv2dSVDO(nn.Module):
             lrt_mean = F.conv2d(x, self.weight, bias=self.bias,
                                 stride=self.stride, padding=self.padding,
                                 dilation=self.dilation, groups=self.groups)
-            lrt_sigma = F.conv2d(x ** 2, torch.exp(self.log_sigma_2),
+            lrt_sigma = F.conv2d(x ** 2, torch.exp(self.log_alpha) * self.weight ** 2,
                                  stride=self.stride, padding=self.padding,
                                  dilation=self.dilation, groups=self.groups)
             lrt_sigma = torch.sqrt(lrt_sigma + 1e-8)
