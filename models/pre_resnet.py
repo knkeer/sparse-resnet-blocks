@@ -119,7 +119,7 @@ class LinearClassifier(nn.Module):
 
     def forward(self, x):
         out = self.avg_pool(self.relu(self.bn(x)))
-        return F.log_softmax(self.linear(out), dim=-1)
+        return F.log_softmax(self.linear(out.view(out.size(0), -1)), dim=-1)
 
     def kullback_leibler_divergence(self):
         if self.sparse:
@@ -128,12 +128,16 @@ class LinearClassifier(nn.Module):
 
 
 class WeakClassifier(nn.Module):
-    def __init__(self, block, num_classes=10, sparse=False):
+    def __init__(self, block, num_classes=10, sparse=False, num_channels=None):
         super(WeakClassifier, self).__init__()
         self.num_classes = num_classes
+        if num_channels is not None:
+            self.num_channels = num_channels
+        else:
+            self.num_channels = block.out_channels
         self.sparse = sparse
         self.block = block
-        self.classifier = LinearClassifier(self.block.out_channels, num_classes=num_classes, sparse=sparse)
+        self.classifier = LinearClassifier(self.num_channels, num_classes=num_classes, sparse=sparse)
 
     def forward(self, x):
         return self.classifier(self.block(x))
@@ -143,7 +147,7 @@ class WeakClassifier(nn.Module):
         if hasattr(self.block, 'kullback_leibler_divergence'):
             total_kl = total_kl + self.block.kullback_leibler_divergence()
         else:
-            for module in self.block.modules:
+            for module in self.block.modules():
                 if isinstance(module, (svdo.LinearSVDO, svdo.Conv2dSVDO)):
                     total_kl = total_kl + module.kullback_leibler_divergence()
         if self.sparse:
@@ -168,17 +172,22 @@ class LayerwiseSequential(nn.Module):
     def residual_init(self, old_weak_classifier):
         with torch.no_grad():
             old_num_channels = old_weak_classifier.classifier.in_channels
-            curr_num_channels = self.weak_classifier.classfifer.in_channels
+            curr_num_channels = self.weak_classifier.classifier.in_channels
             if curr_num_channels % old_num_channels == 0:
                 times = curr_num_channels // old_num_channels
                 old_weight = old_weak_classifier.classifier.linear.weight.data
                 old_bias = old_weak_classifier.classifier.linear.bias.data
                 old_weight = old_weight.repeat((1, times)) / times
-                self.weak_classifier.classfifer.linear.weight.data = old_weight
-                self.weak_classifier.classfifer.linear.bias.data = old_bias
+                if hasattr(self.weak_classifier.classifier.linear, 'log_sigma_2'):
+                    if hasattr(old_weak_classifier.classifier.linear, 'log_sigma_2'):
+                        old_log_sigma_2 = old_weak_classifier.classifier.linear.log_sigma_2.data
+                        old_log_sigma_2 = old_log_sigma_2.repeat((1, times)) - torch.log(times)
+                        self.weak_classifier.classifier.linear.log_sigma_2.data = old_log_sigma_2
+                self.weak_classifier.classifier.linear.weight.data = old_weight
+                self.weak_classifier.classifier.linear.bias.data = old_bias
                 if times != 1 and isinstance(self.weak_classifier.block, (BasicBlock, Bottleneck)):
                     shortcut_weight = torch.eye(old_num_channels)
-                    shortcut_weight = shortcut_weight.repeat((1, times))
+                    shortcut_weight = shortcut_weight.repeat((times, 1))
                     shortcut_weight = shortcut_weight + torch.randn_like(shortcut_weight) * 1e-4
                     self.weak_classifier.block.shortcut.weight.data[:, :, 0, 0] = shortcut_weight
                     if isinstance(self.weak_classifier.block, BasicBlock):
@@ -220,7 +229,7 @@ def make_resnet(num_classes=10, depth=110, sparse=False, sequential=False):
     layers.extend(_make_blocks(64, 128, 2, n))
     layers.extend(_make_blocks(128, 256, 2, n))
     if sequential:
-        weak_classifiers = [WeakClassifier(nn.Sequential(layers[0], layers[1]))]
+        weak_classifiers = [WeakClassifier(nn.Sequential(layers[0], layers[1]), num_channels=layers[1].out_channels)]
         for layer in layers[2:]:
             weak_classifiers.append(WeakClassifier(layer))
         return weak_classifiers
