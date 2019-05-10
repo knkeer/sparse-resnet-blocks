@@ -81,7 +81,7 @@ if __name__ == '__main__':
         else:
             optimizer = optim.SGD(model.weak_classifier.parameters(), lr=args.learning_rate,
                                   weight_decay=args.weight_decay, momentum=0.9)
-        lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [100, 125, 150, 175], gamma=0.5)
         optimizer.load_state_dict(checkpoint['optimizer'])
         lr_scheduler.load_state_dict(checkpoint['lr_scheduler'])
     else:
@@ -92,7 +92,7 @@ if __name__ == '__main__':
         else:
             optimizer = optim.SGD(model.weak_classifier.parameters(), lr=args.learning_rate,
                                   weight_decay=args.weight_decay, momentum=0.9)
-        lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5)
+        lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [100, 125, 150, 175], gamma=0.5)
 
     columns = ['block', 'epoch', 'lr', 'tr_loss', 'tr_acc', 'te_loss', 'te_acc', 'time']
     if args.sparse:
@@ -121,7 +121,7 @@ if __name__ == '__main__':
             else:
                 optimizer = optim.SGD(model.weak_classifier.parameters(), lr=args.learning_rate,
                                       weight_decay=args.weight_decay, momentum=0.9)
-            lr_scheduler = optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.5)
+            lr_scheduler = optim.lr_scheduler.MultiStepLR(optimizer, [100, 125, 150, 175], gamma=0.5)
             if args.sparse:
                 criterion = svdo.SGVLB(model, len(dataloader['train'].dataset))
             else:
@@ -157,12 +157,9 @@ if __name__ == '__main__':
                 block_compression = utils.compression(model.weak_classifier.block)
                 classifier_compression = utils.compression(model.weak_classifier.classifier)
                 values = values[:-1] + [block_compression, classifier_compression, criterion.beta] + values[-1:]
-                if criterion.beta == 1.0:
-                    lr_scheduler.step(test_results['loss'] / len(dataloader['train'].dataset))
                 if epoch >= 49:
                     criterion.update_beta(step=0.02)
-            else:
-                lr_scheduler.step(test_results['loss'])
+            lr_scheduler.step()
             table = tabulate.tabulate([values], columns, floatfmt=fmt)
             if (epoch - start_epoch) % 40 == 0:
                 table = table.split('\n')
