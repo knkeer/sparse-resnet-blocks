@@ -57,8 +57,7 @@ if __name__ == '__main__':
     print('Loading CIFAR-10 from {}'.format(os.path.abspath(args.data_dir)))
     dataloader = utils.get_cifar(args.data_dir, batch_size=args.batch_size, num_workers=args.num_workers)
     print('Using {} ResNet110-v2'.format('sparse' if args.sparse else 'dense'))
-    #weak_classifiers = pre_resnet.make_resnet(sparse=args.sparse, sequential=True)
-    weak_classifiers = pre_resnet.make_resnet(depth=8, sparse=args.sparse, sequential=True)
+    weak_classifiers = pre_resnet.make_resnet(sparse=args.sparse, sequential=True)
     model = pre_resnet.LayerwiseSequential()
 
     if args.sparse:
@@ -154,6 +153,8 @@ if __name__ == '__main__':
                 values = values[:-1] + [block_compression, classifier_compression, criterion.beta] + values[-1:]
                 if criterion.beta == 1.0:
                     lr_scheduler.step(test_results['loss'] / len(dataloader['train'].dataset))
+                if epoch >= 49:
+                    criterion.update_beta(step=0.02)
             else:
                 lr_scheduler.step(test_results['loss'])
             table = tabulate.tabulate([values], columns, floatfmt=fmt)

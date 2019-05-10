@@ -229,9 +229,10 @@ def make_resnet(num_classes=10, depth=110, sparse=False, sequential=False):
     layers.extend(_make_blocks(64, 128, 2, n))
     layers.extend(_make_blocks(128, 256, 2, n))
     if sequential:
-        weak_classifiers = [WeakClassifier(nn.Sequential(layers[0], layers[1]), num_channels=layers[1].out_channels)]
+        weak_classifiers = [WeakClassifier(
+            nn.Sequential(layers[0], layers[1]), num_channels=layers[1].out_channels, sparse=sparse)]
         for layer in layers[2:]:
-            weak_classifiers.append(WeakClassifier(layer))
+            weak_classifiers.append(WeakClassifier(layer, sparse=sparse))
         return weak_classifiers
     else:
         layers.append(LinearClassifier(layers[-1].out_channels, num_classes, sparse=sparse))
