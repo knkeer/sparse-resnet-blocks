@@ -61,7 +61,7 @@ def train_model(model, optimizer, criterion, dataloader,
         train_accuracy += torch.sum(torch.argmax(outputs, dim=-1) == targets).item()
     train_loss /= len(dataloader.dataset)
     train_accuracy /= len(dataloader.dataset)
-    return {'loss': train_loss, 'accuracy': train_accuracy}
+    return {'loss': train_loss, 'accuracy': train_accuracy * 100.0}
 
 
 def validate_model(model, criterion, dataloader,
@@ -77,7 +77,7 @@ def validate_model(model, criterion, dataloader,
         test_accuracy += torch.sum(torch.argmax(outputs, dim=-1) == targets).item()
     test_loss /= len(dataloader.dataset)
     test_accuracy /= len(dataloader.dataset)
-    return {'loss': test_loss, 'accuracy': test_accuracy}
+    return {'loss': test_loss, 'accuracy': test_accuracy * 100.0}
 
 
 def parameter_statistics(model, eps=1e-8):
