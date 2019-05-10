@@ -35,6 +35,8 @@ if __name__ == '__main__':
                         help='use ADAM optimizer instead of SGD')
     parser.add_argument('--save-freq', type=int, default=25, required=False, metavar='N',
                         help='number of epochs between checkpoints (default: 25)')
+    parser.add_argument('--eval-freq', type=int, default=5, required=False, metavar='N',
+                        help='number of epochs between evaluations (default: 5)')
     parser.add_argument('--resume', type=str, default=None, required=False, metavar='CKPT',
                         help='resume training from checkpoint (default: None)')
     parser.add_argument('--device', type=str, default=None, required=False,
@@ -131,7 +133,10 @@ if __name__ == '__main__':
         for epoch in range(start_epoch, args.num_epochs):
             epoch_time = time.time()
             train_results = utils.train_model(model, optimizer, criterion, dataloader['train'], device=device)
-            test_results = utils.validate_model(model, criterion, dataloader['test'], device=device)
+            if (epoch + 1 - start_epoch) % args.eval_freq == 0 or epoch == args.num_epochs - 1:
+                test_results = utils.validate_model(model, criterion, dataloader['test'], device=device)
+            else:
+                test_results = {'loss': None, 'accuracy': None}
             epoch_time = time.time() - epoch_time
             if (epoch - start_epoch + 1) % args.save_freq == 0 or epoch == args.num_epochs - 1:
                 utils.make_checkpoint(
