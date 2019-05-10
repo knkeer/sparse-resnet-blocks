@@ -145,8 +145,9 @@ if __name__ == '__main__':
             current_lr = args.learning_rate
             for param_group in optimizer.param_groups:
                 current_lr = param_group['lr']
-            values = [block_idx + 1, epoch + 1, train_results['loss'], train_results['accuracy'] * 100.0,
-                      test_results['loss'], test_results['accuracy'] * 100.0, epoch_time]
+            values = [block_idx + 1, epoch + 1, current_lr, train_results['loss'],
+                      train_results['accuracy'] * 100.0, test_results['loss'],
+                      test_results['accuracy'] * 100.0, epoch_time]
             if args.sparse:
                 block_compression = utils.compression(model.weak_classifier.block)
                 classifier_compression = utils.compression(model.weak_classifier.classifier)
